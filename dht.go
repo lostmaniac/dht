@@ -77,11 +77,12 @@ type Config struct {
 
 // NewStandardConfig returns a Config pointer with default values.
 func NewStandardConfig() *Config {
+	rand.Seed(time.Now().UnixNano())
 	return &Config{
 		K:           8,
 		KBucketSize: 8,
 		Network:     "udp4",
-		Address:     fmt.Sprintf("%s%s", ":", strconv.Itoa(rand.Intn(6880-6999))),
+		Address:     fmt.Sprintf("%s%s", ":", strconv.Itoa(rand.Intn(6999-6880)+6880)),
 		PrimeNodes: []string{
 			"router.utorrent.com:6881",
 			"router.bittorrent.com:6881",
