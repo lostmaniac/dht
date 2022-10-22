@@ -2,7 +2,7 @@
 
 See the video on the [Youtube](https://www.youtube.com/watch?v=AIpeQtw22kc).
 
-[中文版README](https://github.com/shiyanhui/dht/blob/master/README_CN.md)
+[中文版README](https://github.com/lostmaniac/dht/blob/master/README_CN.md)
 
 ## Introduction
 
@@ -22,17 +22,17 @@ standard BEPs protocol. With the crawling mode, you can build another [BTDigg](h
 
 ## Installation
 
-    go get github.com/shiyanhui/dht
+    go get github.com/lostmaniac/dht
 
 ## Example
 
-Below is a simple spider. You can move [here](https://github.com/shiyanhui/dht/blob/master/sample)
+Below is a simple spider. You can move [here](https://github.com/lostmaniac/dht/blob/master/sample)
 to see more samples.
 
 ```go
 import (
     "fmt"
-    "github.com/shiyanhui/dht"
+    "github.com/lostmaniac/dht"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 
 ## Download
 
-You can download the demo compiled binary file [here](https://github.com/shiyanhui/dht/files/407021/spider.zip).
+You can download the demo compiled binary file [here](https://github.com/lostmaniac/dht/files/407021/spider.zip).
 
 ## Note
 
@@ -84,4 +84,4 @@ Well, maybe there are several reasons.
 
 ## License
 
-MIT, read more [here](https://github.com/shiyanhui/dht/blob/master/LICENSE)
+MIT, read more [here](https://github.com/lostmaniac/dht/blob/master/LICENSE)
