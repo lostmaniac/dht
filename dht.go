@@ -5,8 +5,11 @@ package dht
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math"
+	"math/rand"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -74,11 +77,12 @@ type Config struct {
 
 // NewStandardConfig returns a Config pointer with default values.
 func NewStandardConfig() *Config {
+	listenProt := fmt.Sprintf("%s%s", ":", strconv.Itoa(rand.Intn(6880-6999)))
 	return &Config{
 		K:           8,
 		KBucketSize: 8,
 		Network:     "udp4",
-		Address:     ":6881",
+		Address:     listenProt,
 		PrimeNodes: []string{
 			"router.utorrent.com:6881",
 			"router.bittorrent.com:6881",
