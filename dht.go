@@ -98,13 +98,13 @@ func NewStandardConfig() *Config {
 		CheckKBucketPeriod:   time.Duration(time.Second * 30),
 		TokenExpiredAfter:    time.Duration(time.Minute * 10),
 		MaxTransactionCursor: math.MaxUint32,
-		MaxNodes:             5000,
+		MaxNodes:             50000,
 		BlockedIPs:           make([]string, 0),
 		BlackListMaxSize:     65536,
 		Try:                  2,
 		Mode:                 StandardMode,
-		PacketJobLimit:       1024,
-		PacketWorkerLimit:    256,
+		PacketJobLimit:       10240,
+		PacketWorkerLimit:    2560,
 		RefreshNodeNum:       8,
 	}
 }
@@ -117,7 +117,7 @@ func NewCrawlConfig() *Config {
 	config.CheckKBucketPeriod = time.Second * 5
 	config.KBucketSize = math.MaxInt32
 	config.Mode = CrawlMode
-	config.RefreshNodeNum = 256
+	config.RefreshNodeNum = 5120
 
 	return config
 }
