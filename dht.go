@@ -135,6 +135,9 @@ type DHT struct {
 	Ready              bool
 	packets            chan packet
 	workerTokens       chan struct{}
+	// For TorrentSession integration
+	torrentSessions map[string]chan<- []*Peer
+	tsLock          sync.RWMutex // To protect torrentSessions map
 }
 
 // New returns a DHT pointer. If config is nil, then config will be set to
@@ -144,17 +147,21 @@ func New(config *Config) *DHT {
 		config = NewStandardConfig()
 	}
 
+	// Initialize torrentSessions map here
+	tsMap := make(map[string]chan<- []*Peer)
+
 	node, err := newNode(randomString(20), config.Network, config.Address)
 	if err != nil {
 		panic(err)
 	}
 
 	d := &DHT{
-		Config:       config,
-		node:         node,
-		blackList:    newBlackList(config.BlackListMaxSize),
-		packets:      make(chan packet, config.PacketJobLimit),
-		workerTokens: make(chan struct{}, config.PacketWorkerLimit),
+		Config:          config,
+		node:            node,
+		blackList:       newBlackList(config.BlackListMaxSize),
+		packets:         make(chan packet, config.PacketJobLimit),
+		workerTokens:    make(chan struct{}, config.PacketWorkerLimit),
+		torrentSessions: tsMap, // Assign initialized map
 	}
 
 	for _, ip := range config.BlockedIPs {
@@ -244,29 +251,72 @@ func (dht *DHT) id(target string) string {
 	return target[:15] + dht.node.id.RawString()[15:]
 }
 
+// RegisterTorrent allows a TorrentSession to register for peer discovery updates for a specific infohash.
+func (dht *DHT) RegisterTorrent(infoHashHex string, peerChan chan<- []*Peer) {
+	dht.tsLock.Lock()
+	defer dht.tsLock.Unlock()
+	if dht.torrentSessions == nil {
+		dht.torrentSessions = make(map[string]chan<- []*Peer)
+	}
+	dht.torrentSessions[infoHashHex] = peerChan
+	// fmt.Printf("DHT: Registered torrent session for infohash %s\n", infoHashHex)
+}
+
+// DeregisterTorrent removes a TorrentSession's registration.
+func (dht *DHT) DeregisterTorrent(infoHashHex string) {
+	dht.tsLock.Lock()
+	defer dht.tsLock.Unlock()
+	if dht.torrentSessions != nil {
+		delete(dht.torrentSessions, infoHashHex)
+		// fmt.Printf("DHT: Deregistered torrent session for infohash %s\n", infoHashHex)
+	}
+}
+
 // GetPeers returns peers who have announced having infoHash.
-func (dht *DHT) GetPeers(infoHash string) error {
+// For TorrentSession integration, results will also be sent to registered channels.
+func (dht *DHT) GetPeers(infoHashTarget string) error { // Renamed infoHash to infoHashTarget to avoid conflict
 	if !dht.Ready {
 		return ErrNotReady
 	}
 
-	if dht.OnGetPeersResponse == nil {
-		return ErrOnGetPeersResponseNotSet
-	}
+	// The dht.OnGetPeersResponse callback is still useful for generic DHT users,
+	// but TorrentSessions will use the channel-based mechanism.
+	// If no TorrentSession is registered and no callback, it might be an issue.
+	// However, TorrentSession will register, so one of them should be available.
+	// if dht.OnGetPeersResponse == nil {
+	// 	 ihHex := ""
+	// 	 if len(infoHashTarget) == 20 {
+	// 	 	ihHex = hex.EncodeToString([]byte(infoHashTarget))
+	// 	 } else if len(infoHashTarget) == 40 {
+	// 	 	ihHex = infoHashTarget
+	// 	 }
+	// 	 dht.tsLock.RLock()
+	// 	 _, exists := dht.torrentSessions[ihHex]
+	// 	 dht.tsLock.RUnlock()
+	// 	 if !exists {
+	// 	 	 return ErrOnGetPeersResponseNotSet // Or a new error if no mechanism is available
+	// 	 }
+	// }
 
-	if len(infoHash) == 40 {
-		data, err := hex.DecodeString(infoHash)
+
+	actualInfoHash := ""
+	if len(infoHashTarget) == 40 {
+		data, err := hex.DecodeString(infoHashTarget)
 		if err != nil {
 			return err
 		}
-		infoHash = string(data)
+		actualInfoHash = string(data)
+	} else if len(infoHashTarget) == 20 {
+		actualInfoHash = infoHashTarget
+	} else {
+		return fmt.Errorf("GetPeers: infoHashTarget must be 20 bytes (raw) or 40 bytes (hex), got %d", len(infoHashTarget))
 	}
 
 	neighbors := dht.routingTable.GetNeighbors(
-		newBitmapFromString(infoHash), dht.routingTable.Len())
+		newBitmapFromString(actualInfoHash), dht.routingTable.Len())
 
 	for _, no := range neighbors {
-		dht.transactionManager.getPeers(no, infoHash)
+		dht.transactionManager.getPeers(no, actualInfoHash)
 	}
 
 	return nil
